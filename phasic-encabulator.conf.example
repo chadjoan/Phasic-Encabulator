@@ -1,0 +1,75 @@
+# The only accepted text encoding for this file is UTF8.
+
+# This section allows you to tell the script to wake you up after a specified
+#   amount of time has passed since sleep onset.  
+# This may also be qualified with a sleep stage, which will wake you once the
+#   given sleep stage has continued for the given amount of time.
+wake_after
+    miner1 = 1 light  # 1 second of light sleep
+    miner2 = 2 light  # 2 seconds
+    miner3 = 3 light
+    miner4 = 4 light
+    miner5 = 5 light
+    miner6 = 6 light
+    
+    # The alarm command for this wake_after block.
+    # This is executed at the system's command line.
+    alarm = "mplayer alarm.wav"
+end
+
+wake_after
+    # Examples that will wake after any combination of light/rem/wake/etc.
+    core = 3:00:00  # 3 hours
+    nap1 = 0:20:00  # 20 minutes
+    nap2 =   20:00  # 20 minutes
+    20:00 - 24:00 = 20:00 # same as nap3 = 20:00
+    
+    alarm = "mplayer alarm.wav"
+end
+
+
+# How long (in minutes) to allow light sleep to last, depending on the time of day.
+
+timespan_names
+    miner1 = 23:00 - 03:00
+    miner2 = 02:00   # same as 03:00 - 05:00
+    miner3 = 04:00 
+    miner4 = 06:00 
+    miner5 = 07:00 
+    miner6 = 11:00 
+    miner5 = 14:00   # names can be defined twice.  They will be associated with /both/ timespans.
+    miner4 = 17:00 
+    miner3 = 19:00 
+    miner2 = 21:00   # same as 21:00 - 23:00; the default end bounds wrap to the first entry.
+end
+
+timespan_names
+    core =  0:00 - 10:00 
+    nap1 = 10:00 - 14:00 
+    nap2 = 14:00 - 20:00 
+    nap3 = 20:00 - 24:00 
+end
+
+output
+    # All of the right-hand-side values in this section must be in quotes.
+    # The date formats supported are those found in the python docs for datetime:
+    #   http://docs.python.org/library/datetime.html#strftime-strptime-behavior
+    # %NAME{x,y,z} will expand to one of the timespan names given in the curly
+    #   braces based on the current time.  When a some data is written the names
+    #   will be scanned left-to-right until one of them encompasses the current
+    #   local time.
+    # To write the % character into the path, use %%
+    # To write the " character into the path, use ""
+    
+    # These statements specify where to place and how to name the individual 
+    #   files.
+    # If one of the output files is missing from this list then it will not be
+    #   written when recording data.
+    # Future direction: there should be some shorthand for condensing identical
+    #   parts of the path.  Possibly use the % to dereference other constant
+    #   definitions.
+    raw =         "/home/chad/downloads/zeo/data/%Y-%m-%d/%NAME{core,nap1,nap2,nap3}/raw_samples.gz"
+    spectrogram = "/home/chad/downloads/zeo/data/%Y-%m-%d/%NAME{core,nap1,nap2,nap3}/spectrogram.gz"
+    hypnogram =   "/home/chad/downloads/zeo/data/%Y-%m-%d/%NAME{core,nap1,nap2,nap3}/hypnogram.csv"
+    events =      "/home/chad/downloads/zeo/data/%Y-%m-%d/%NAME{core,nap1,nap2,nap3}/events.csv"
+end

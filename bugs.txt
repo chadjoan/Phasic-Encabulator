@@ -1,0 +1,113 @@
+
+          Undefined    (Bad Signal)
+Capture error: bad checksum
+Capture error: Mismatched lengths.
+Capture error: bad checksum
+Capture error: Mismatched lengths.
+Capture error: bad checksum
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: bad checksum
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: bad checksum
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: bad checksum
+          Undefined    (Bad Signal)
+          Undefined                
+          Undefined                
+          Undefined                
+          Undefined    (Bad Signal)
+          Undefined                
+          Undefined                
+####      Light ....               
+####      Light ....               
+####      Light ....               
+########  Awake ....               
+########  Awake ....               
+########  Awake ....               
+########  Awake ....               
+Capture error: bad checksum
+Capture error: Mismatched lengths.
+Capture error: bad checksum
+Capture error: bad checksum
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+Capture error: bad checksum
+Capture error: Mismatched lengths.
+Capture error: Mismatched lengths.
+########  Awake ....               
+########  Awake ....               
+########  Awake ....               
+########  Awake ....               
+######    REM ......               
+######    REM ......               
+########  Awake ....               
+########  Awake ....               
+########  Awake ....               
+########  Awake ....               
+########  Awake ....               
+######    REM ......               
+######    REM ......               
+######    REM ......               
+######    REM ......               
+######    REM ......               
+######    REM ......               
+####      Light ....               
+######    REM ......               
+######    REM ......               
+######    REM ......               
+######    REM ......               
+Capture error: bad checksum
+
+Caught an exception!
+This is almost certainly a bug.
+The exception's message is as follows:
+Traceback (most recent call last):
+  File "encabulator.pyw", line 153, in run
+    BaseLink.BaseLink.run(self)
+  File "/mnt/sharedhd/downloads/zeo/ZeoRawDataLib/Distribute/Phasic-Encabulator/ZeoRawData/BaseLink.py", line 182, in run
+    callback(timestamp, timestamp_subsec, version, data)
+  File "/mnt/sharedhd/downloads/zeo/ZeoRawDataLib/Distribute/Phasic-Encabulator/ZeoRawData/Parser.py", line 71, in update
+    version, eventTypes[getUInt32(data[1:5])])#for some reason 5 long when did 1:
+KeyError: 156
+Zeo disconnected from port /dev/ttyUSB0
+
+Current serial port status:
+/dev/ttyUSB0
+
+
+-------------------------------------------
+
+
+
+
+
+
+17:37:00 ####      Light                    
+17:37:30 ########  Awake                    
+17:38:00           Undefined    (Bad Signal)
+
+Caught an exception!
+This is almost certainly a bug.
+The exception's message is as follows:
+Traceback (most recent call last):
+  File "encabulator.pyw", line 843, in <module>
+    encabulator.run()
+  File "encabulator.pyw", line 807, in run
+    self.ioLock.release()
+error: release unlocked lock
+
+Restarting in 0.5 seconds...
+
+-------------------------
+Found the following ports:
+/dev/ttyUSB0
