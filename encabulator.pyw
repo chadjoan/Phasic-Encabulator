@@ -1,6 +1,37 @@
 #!/usr/bin/python -d
 # -*- coding: utf-8 -*-
 
+'''
+    Phasic Encabulator -- Records and responds to sleep data in realtime.
+    Copyright (C) 2011  Chad Joan
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    To contact the author, send an email to chadjoan@gmail.com
+    
+    
+    This program will require either the Zeo Raw Data Library or a suitable
+    substitute in order to function.  If you use the Zeo Raw Data Library you
+    must also agree to the terms and conditions for the Zeo Raw Data Library.
+    These terms and conditions can be found at 
+    <http://developers.myzeo.com/terms-and-conditions/>.
+    
+'''
+
+USE_ZEO_RDL = True
+
+
 # NapTrainer.pyw
 # This program will attempt to wake the sleeper whenever they are in light sleep
 #   for too long.  This could potentially be used to acquire better polyphasic
@@ -26,12 +57,14 @@ import traceback
 import io
 import re
 from sleepconfig import *
-from threading import Lock, Thread, Timer
+from threading import RLock, Thread, Timer
 from termcolor import colored
 from serial import *
 from glob import glob
-from ZeoRawData import BaseLink, Parser
 import TermInput
+
+if ( USE_ZEO_RDL ):
+    from ZeoRawData import BaseLink, Parser
 
 def printException():
     print ""
@@ -531,13 +564,94 @@ class PhasicEncabulator:
         self.trainer = None
         self.output = None
         self.link = None
-        self.ioLock = Lock()
+        self.ioLock = RLock()
     
         self.linkWasConnected = False
         self.defaultPort = ""
         self.oldPorts = []
         
         self.config = None
+        
+    def printOptions(self):
+        print ""
+        print "---------------------------"
+        print ""
+        print "Below are the available hotkeys."
+        print "They are case insensitive."
+        print "  space ........ Turn off any running alarms."
+        print "  ctrl-C or Q .. Quit."
+        print "  W ............ Print disclaimer."
+        print "  L ............ Print license (the full GPL v3 text)."
+        print "  O ............ Print available options/hotkeys (this text)."
+        
+    def printDisclaimer(self):
+        self.ioLock.acquire()
+        print ""
+        print "----------------------------------"
+        print "  Disclaimer sections of the GPL"
+        print "----------------------------------"
+        print ""
+        
+        #TODO: some way to grab these from the file itself?
+        print "  15. Disclaimer of Warranty."
+        print ""
+        print "  THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY"
+        print "APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT"
+        print 'HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY'
+        print "OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,"
+        print "THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR"
+        print "PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM"
+        print "IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF"
+        print "ALL NECESSARY SERVICING, REPAIR OR CORRECTION."
+        print ""
+        print "  16. Limitation of Liability."
+        print ""
+        print "  IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING"
+        print "WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR CONVEYS"
+        print "THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY"
+        print "GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE"
+        print "USE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS OF"
+        print "DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD"
+        print "PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS),"
+        print "EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF"
+        print "SUCH DAMAGES."
+        print ""
+        print "  17. Interpretation of Sections 15 and 16."
+        print ""
+        print "  If the disclaimer of warranty and limitation of liability provided"
+        print "above cannot be given local legal effect according to their terms,"
+        print "reviewing courts shall apply local law that most closely approximates"
+        print "an absolute waiver of all civil liability in connection with the"
+        print "Program, unless a warranty or assumption of liability accompanies a"
+        print "copy of the Program in return for a fee."
+        
+        self.ioLock.release()
+        
+    def printLicense(self):
+        
+        self.ioLock.acquire()
+        print ""
+        print "---------------------------"
+        print ""
+        
+        licStream = open("license.txt","rt")
+        while ( True ):
+            line = licStream.readline()
+            if len(line) == 0: break;
+            sys.stdout.write(line)
+            #print line
+        
+        licStream.close()
+        
+        if ( USE_ZEO_RDL ):
+            print ""
+            print "This program will require either the Zeo Raw Data Library or a suitable"
+            print "substitute in order to function.  If you use the Zeo Raw Data Library you"
+            print "must also agree to the terms and conditions for the Zeo Raw Data Library."
+            print "These terms and conditions can be found at "
+            print "<http://developers.myzeo.com/terms-and-conditions/>."
+        
+        self.ioLock.release()
         
     def attachSerial(self,portStr):
         print "------------------------------------------------"
@@ -615,6 +729,13 @@ class PhasicEncabulator:
     
     # Always call this before run().
     def startup(self):
+        
+        print ""
+        print "Phasic Encabulator  Copyright (C) 2011  Chad Joan"
+        print "This program comes with ABSOLUTELY NO WARRANTY; for details hit "+colored("w", 'green')+"."
+        print "This is free software, and you are welcome to redistribute it"
+        print "under certain conditions; hit "+colored("l", 'green')+" for details."
+        print ""
         
         # Places to look for the config file.  It will scan the list from 
         #   left to right and pick the first one it finds.
@@ -716,8 +837,18 @@ class PhasicEncabulator:
                         print "---------------------------"
                         print "Q command given.  Quitting."
                         break # quit
+                    elif ch == 'w' or ch == 'W':
+                        self.printDisclaimer()
+                        self.printOptions()
+                    elif ch == 'l' or ch == 'L':
+                        self.printLicense()
+                        self.printOptions()
+                    elif ch == 'o' or ch == 'O':
+                        self.printOptions()
                     elif ch == '\x03': # ctrl-c
                         break # quit
+                    elif ch == '\x0A':
+                        print ""
                 except SerialException:
                     ''' keep going.'''
                 finally:
