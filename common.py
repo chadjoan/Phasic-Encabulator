@@ -34,6 +34,11 @@ DATA_HGRAM  = 1
 DATA_SGRAM  = 2
 DATA_EVENTS = 3
 
+# Don't store more than this many epochs in sleep history memory.
+# This matters only for regular expression matching.
+MAX_HISTORY_LEN = 30000 # Lil' more than 10 days worth ;)
+
+
 def errUknownSleepType():
     raise Exception("Unknown type of sleep data: "+str(dtype))
 
@@ -51,10 +56,12 @@ SLEEP_STATE_DEEP      = 'Deep'
 SLEEP_STATE_LIGHT     = 'Light'
 SLEEP_STATE_REM       = 'REM'
 SLEEP_STATE_AWAKE     = 'Awake'
+SLEEP_STATE_NOT_GIVEN = 'Not Given' # Indicates the absence of a string from Zeo
 
 # Table mapping Zeo's string constants for sleep-states onto height values.
 SLEEP_STATE_TO_HEIGHT =  {  'Undefined' : 0,
                             'Deep'      : 1,
                             'Light'     : 2,
                             'REM'       : 3,
-                            'Awake'     : 4}
+                            'Awake'     : 4,
+                            'Not Given' : 0}

@@ -46,6 +46,7 @@ from common import *
 
 import sys
 import time
+import calendar
 import csv
 import subprocess
 import os
@@ -217,7 +218,7 @@ def getHeader(dataType):
         header = ["Time Stamp","Version","SQI","Impedance","Bad Signal (Y/N)","Voltage (uV)"]
     elif dataType == DATA_SGRAM:
         header = ["Time Stamp","Version","SQI","Impedance","Bad Signal (Y/N)",
-                                   "2-4 Hz","4-8 Hz","8-13 Hz","11-14 Hz","13-18 Hz","18-21 Hz","30-50 Hz"]
+                                "2-4 Hz","4-8 Hz","8-13 Hz","11-14 Hz","13-18 Hz","18-21 Hz","30-50 Hz"]
     elif dataType == DATA_HGRAM:
         header = ["Time Stamp","Version","SQI","Impedance","Bad Signal (Y/N)","State (0-4)","State (named)"]
     elif dataType == DATA_EVENTS:
@@ -236,11 +237,87 @@ class StreamCache:
             DATA_EVENTS : None,
         }
 
+class SleepContext:
+    
+    def __init__(self, parent=None):
+        self.history = ""
+        self.currentSlice = {}
+        self.currentTimeStruct = time.localtime()
+        self.currentZeoVersion = ""
+        self.currentSignalIsBad = False
+        self.currentSleepStage = SLEEP_STATE_NOT_GIVEN
+        
+    
+    def updateSlice(self, slice):
+        
+        if slice['SleepStage'] == None:
+            return
+        
+        timestamp = slice['ZeoTimestamp']
+        
+        timeStruct = None
+        timeIsSystemTime = False
+        try:
+            timeStruct = time.strptime(timestamp, "%m/%d/%Y %H:%M:%S")
+        except Exception:
+            timeStruct = time.localtime()
+            timeIsSystemTime = True
+        
+        newTime = calendar.timegm(timeStruct)
+        oldTime = calendar.timegm(self.currentTimeStruct)
+        if ( newTime == oldTime ):
+            return
+        
+        self.currentTimeStruct = timeStruct
+        
+        if ( timeIsSystemTime ):
+            print ""
+            print "Bad timestamp value given: "+colored(timestamp, 'red', attrs=['bold'])
+            print "Using system time instead: "+colored(time.strftime("%m/%d/%Y %H:%M:%S",timeStruct), 'green', attrs=['bold'])
+        
+        self.currentZeoVersion = slice['Version']
+
+        if slice['BadSignal']:
+            self.currentSignalIsBad = True
+        else:
+            self.currentSignalIsBad = False
+
+        #if not slice['SleepStage'] == None:
+        self.currentSleepStage = slice['SleepStage']
+        #else:
+        #    self.currentSleepStage = SLEEP_STATE_NOT_GIVEN
+
+        # TODO: How do we acquire NOT_GIVEN sleep states?  It would make sense
+        #   to count how many epochs (30 sec intervals) have elapsed since the
+        #   last reading and then insert blank history data for those.
+        givenSleepState = ' '
+        if   self.currentSleepStage == SLEEP_STATE_UNDEFINED:
+            givenSleepState = 'U'
+        elif self.currentSleepStage == SLEEP_STATE_DEEP:
+            givenSleepState = 'D'
+        elif self.currentSleepStage == SLEEP_STATE_LIGHT:
+            givenSleepState = 'L'
+        elif self.currentSleepStage == SLEEP_STATE_REM:
+            givenSleepState = 'R'
+        elif self.currentSleepStage == SLEEP_STATE_AWAKE:
+            givenSleepState = 'A'
+        
+        if self.currentSignalIsBad:
+            givenSleepState = givenSleepState.lower()
+        
+        self.history = self.history + givenSleepState
+        if len(self.history) > MAX_HISTORY_LEN:
+            self.history = self.history[-MAX_HISTORY_LEN : len(self.history)]
+        
+        return
+    
+
 class ZeoToCSV:
     
     
-    def __init__(self, config, parent=None):
+    def __init__(self, config, context, parent=None):
         self.sleepConfig = config
+        self.context = context
         
         # Each element is a 4-pair table of dataType->stream pairs.  The paths are
         #   paths that have already been filled in with date/name information.
@@ -319,14 +396,21 @@ class ZeoToCSV:
             self.eventsOut.writerow(["Time Stamp","Version","Event"])
         '''
     
-    def displaySleepState(self, stage, timeStamp, badSignal):
-        if badSignal:
+    #def displaySleepState(self, stage, timeStamp, badSignal):
+    def displaySleepState(self):
+        if self.context.currentSleepStage == SLEEP_STATE_NOT_GIVEN:
+            return
+        
+        if self.context.currentSignalIsBad:
             sigStr = colored( "(Bad Signal)", "red", attrs=['bold'] )
         else:
             sigStr =          "            "
         
-        match = re.search("[0-9]{2}:[0-9]{2}:[0-9]{2}",timeStamp)
-        timeStr = match.group()
+        #match = re.search("[0-9]{2}:[0-9]{2}:[0-9]{2}",timeStamp)
+        #timeStr = match.group()
+        timeStr = time.strftime("%H:%M:%S",self.context.currentTimeStruct)
+        
+        stage = self.context.currentSleepStage
         
         if   stage == SLEEP_STATE_UNDEFINED:
             sleepBar =          "        "
@@ -355,10 +439,16 @@ class ZeoToCSV:
             #                      "   Awake .... "+colored(sigStr, "red",  attrs=['bold'] )
         
         # Those dots are kinda awkward if there's nothing to align with.
-        if not badSignal:
+        if not self.context.currentSignalIsBad:
             sleepStr = sleepStr.replace("."," ")
         
-        print timeStr + " " + sleepBar + "  " + sleepStr + "  " + sigStr
+        # TODO: What's our display width? This will determine how much history to dump.
+        if ( len(self.context.history) <= 80 ):
+            historyStr = self.context.history
+        else:
+            historyStr = self.context.history[-80:len(self.context.history)]
+        
+        print timeStr + " " + sleepBar + "  " + sleepStr + "  " + sigStr + "  " + historyStr
         
         return
     
@@ -385,6 +475,8 @@ class ZeoToCSV:
     def _recordData(self, slice):
         #print "_recordData"
         
+        self.context.updateSlice(slice)
+        
         timestamp = slice['ZeoTimestamp']
         ver = slice['Version']
                                         
@@ -398,10 +490,7 @@ class ZeoToCSV:
         else:
             imp = '--'
 
-        if slice['BadSignal']:
-            badSignal = True
-        else:
-            badSignal = False
+        badSignal = self.context.currentSignalIsBad
             
         if badSignal:
             badSignalYN = 'Y'
@@ -425,7 +514,7 @@ class ZeoToCSV:
             self._outputRow(DATA_HGRAM, [timestamp,ver,sqi,imp,badSignalYN] +
                                         [SLEEP_STATE_TO_HEIGHT[stage],str(stage)])
             
-            self.displaySleepState(stage, timestamp, badSignal)
+            self.displaySleepState()
         
         #for dataType, stream in self.outputs.iteritems():
         #    stream.flush()
@@ -456,7 +545,7 @@ class ZeoToCSV:
             print ""
             print "Bad timestamp value given: "+colored(timestamp, 'red', attrs=['bold'])
             timeStruct = time.localtime()
-            print "Using system time instead: "+colored(time.strftime("%m/%d/%Y %H:%M:%S"), 'green', attrs=['bold'])
+            print "Using system time instead: "+colored(time.strftime("%m/%d/%Y %H:%M:%S",timeStruct), 'green', attrs=['bold'])
         
         # Open or switch files as needed.
         destination = self.outputs[index]
@@ -525,9 +614,10 @@ class ZeoToCSV:
         return
 
 class NapTrainer:
-    def __init__(self, parent=None):
+    def __init__(self, context, parent=None):
         self.alarmProcess = None
         self.lightCount = 0
+        self.context = context
         
     
     def updateSlice(self, slice):
@@ -555,6 +645,8 @@ class NapTrainer:
             #subprocess.call(["mplayer","alarm.wav"])
             self.alarmProcess = subprocess.Popen(["mplayer","alarm.wav"])
             self.lightCount = 0
+        
+        #getRem = re.compile("(a|u|l|d)+r{30}(a|u|d|l)+r{30}((a|u|l){5}|((a|u|l)*d))", re.U)
     
     def updateEvent(self, timestamp, version, event):
         """Stub: not needed."""
@@ -571,8 +663,23 @@ class PhasicEncabulator:
         self.oldPorts = []
         
         self.config = None
+        self.context = None
+        
+    def printZeoTos(self):
+        self.ioLock.acquire()
+        
+        if ( USE_ZEO_RDL ):
+            print ""
+            print "This program will require either the Zeo Raw Data Library or a suitable"
+            print "substitute in order to function.  If you use the Zeo Raw Data Library you"
+            print "must also agree to the terms and conditions for the Zeo Raw Data Library."
+            print "These terms and conditions can be found at "
+            print "<http://developers.myzeo.com/terms-and-conditions/>."
+        
+        self.ioLock.release()
         
     def printOptions(self):
+        self.ioLock.acquire()
         print ""
         print "---------------------------"
         print ""
@@ -583,6 +690,7 @@ class PhasicEncabulator:
         print "  W ............ Print disclaimer."
         print "  L ............ Print license (the full GPL v3 text)."
         print "  O ............ Print available options/hotkeys (this text)."
+        self.ioLock.release()
         
     def printDisclaimer(self):
         self.ioLock.acquire()
@@ -642,14 +750,7 @@ class PhasicEncabulator:
             #print line
         
         licStream.close()
-        
-        if ( USE_ZEO_RDL ):
-            print ""
-            print "This program will require either the Zeo Raw Data Library or a suitable"
-            print "substitute in order to function.  If you use the Zeo Raw Data Library you"
-            print "must also agree to the terms and conditions for the Zeo Raw Data Library."
-            print "These terms and conditions can be found at "
-            print "<http://developers.myzeo.com/terms-and-conditions/>."
+        self.printZeoTos()
         
         self.ioLock.release()
         
@@ -658,8 +759,9 @@ class PhasicEncabulator:
         print "Attempting to connect on port " + \
             colored( portStr, 'green', attrs=['bold'] )
         # Initialize
-        self.trainer = NapTrainer()
-        self.output = ZeoToCSV(self.config)
+        self.context = SleepContext()
+        self.trainer = NapTrainer(self.context)
+        self.output = ZeoToCSV(self.config, self.context)
         self.link = ToughLink(portStr)
         self.link.ioLock = self.ioLock
         parser1 = Parser.Parser()
@@ -725,7 +827,7 @@ class PhasicEncabulator:
         
         if not defaultFound:
             print colored(self.defaultPort, "green", attrs=['bold']) + \
-                  colored(" (disconnected)", "red", attrs=['bold'])
+                colored(" (disconnected)", "red", attrs=['bold'])
     
     # Always call this before run().
     def startup(self):
@@ -788,7 +890,7 @@ class PhasicEncabulator:
         self.oldPorts = []
         
         print "Hit "+colored("ctrl-C","green")+\
-              " or "+colored("q","green")+" at any time to stop."
+            " or "+colored("q","green")+" at any time to stop."
         print "Hit space bar to cancel any playing alarms."
         print ""
 
