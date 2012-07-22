@@ -1,16 +1,151 @@
 # The only accepted text encoding for this file is UTF8.
 
+
+# Future directions:
+# 
+# There should be a generic and easy way to turn elements of the configuration 
+#   on and off based on the time of day.
+# Example syntax:
+# @[30:00 - 3:00:00] foo = e/warld/
+# @some_timespan     bar = e/WARLD/
+# @another_timespan  hypnogram = "/home/user/sleepdata/hypnogram.csv"
+#
+# In the instance of "@some_timespan", some_timespan must be defined somewhere
+#   in the config file by using a timespan_names section.
+#
+
+
+# ---------------------- Regular Expressions and Sleep ----------------------
+#
+# A note for newbies:
+# While some of these examples may seem intimidating, the purpose is to
+#   demonstrate the extremes of the regular expression capabilities.
+# If an example is too confusing, just ignore it.
+# Use the examples you understand instead.
+#
+# Sleep can be represented as text.
+# One way of doing this looks like so:
+#
+# wwwwwwllllllllllddddddddddddddddddddlllllllllllrrrrrrrrrrrrrrrrrrrrrllllll...
+#
+# As a result, patterns in sleep can be represented using regular expressions.
+#
+# These expressions look like so:
+#
+# m/w+r{20}/  # Matches 20 minutes of REM sleep after sleep onset.
+# m/[^l]l{5}/ # Matches 5 mins of light sleep that follow any other sleep state.
+# m/w+s{4}+?/ # Matches every 4 minutes during sleep.
+#
+# Here are some less practical examples that demonstrate more possibilities:
+#
+# e/awrldusAWRLDUS/
+# e!w{2}!
+# m/awrl(dus)*/
+# mZa warldu Z
+#
+#
+# The delimiter may be any character.
+# Some delimiters should be avoided though.  These include letters, numbers,
+#   and any of the special symbols used in regular expressions: 
+#   (, ), [, ], {, }, \, *, +, ., ?, |, ^, $
+#   This is because once a delimiter is chosen, then any instance of it will
+#   close the regular expression.  So if 'r' is used, then the regular
+#   expression will be unable to match any instances of REM sleep.
+#
+# The various phases of sleep are represented by these characters:
+#
+# a = awake
+# r = REM
+# l = light
+# d = deep
+# u = undefined
+# w = awake OR undefined
+# s = any of the sleeping states
+#   = (space character) matches unrecorded events
+#
+# You'll probably want to use 'w' instead of 'a' to detect the start or end of
+#   sleep sessions.  This is because people who are awake tend to move around
+#   and/or touch the headband, which is an almost surefire way to end up with
+#   'undefined' readings, and usually with bad-signal flags too.  The Zeo also
+#   has a habit of defaulting to 'undefined' readings when the headband is first
+#   worn and it takes a few epochs to figure out that the wearer is awake.
+#
+# Unrecorded epochs are always treated as equivalent to their preceding epochs
+#   for purposes of matching.  This allows some degree of fault-tolerance when
+#   serial cables decide to have some length mismatches or checksum errors.
+#   The space character is provided as a means to explicitly distinguish
+#   points in time that have no data.
+#
+# The character at the front of the expression decides the units of the 
+#   regular expression.
+#
+# e = epoch
+# m = minutes
+# h = hours
+#
+# When a character is given in units other than epochs, it will match AT MOST
+#   that many units and round anything less.  This means that when reality
+#   provides readings that don't perfectly line up on minute/hour boundaries,
+#   then the reading will be rounded for the purpose of matching.
+#   The rounding differs from normal arithmatic only in that the half values
+#   will round down instead of up.
+# The following expressions are equivalent:
+# m/r/
+# e/rr?/
+#
+# ... as are these:
+# m/rr/
+# e/rrrr?/
+#
+# ... and these:
+# h/rr/
+# m/r{60}r{30}r{30}?/
+# e/r{120}r{60}r{60}?/
+#
+# Each charater has uppercased "strong" versions.
+# This means that the bad-signal flag will cause matching to fail.
+# The following example matches 1 minute of REM with any signal strength, then
+#   it matches 1 minute of REM that cannot have "bad" signal, and then matches
+#   another minute of REM with any signal strength.
+#   foo = e/rrRRrr/
+#
+# Matching rules:
+# When a regular expression matches
+#
+# Compatibility note:
+# While it may be possible to write various Perl Compatible Regular Expressions
+#   with this feature, not all of them are gauranteed to be supported in future
+#   versions of the Encabulator.  
+# The character class characters separated by hypthens, ex: "e/[0-9a-zA-Z]/",
+#   are unsupported.  When used they will error if possible, or behave 
+#   strangely.
+#
+
+# ----------------------------- Action Triggers -----------------------------
+#
+# This section allows you to make your computer do things when patterns in
+#   your sleep are found.
+#
+# The recognition of patterns in this case is done using regular expressions.
+#
 # This section allows you to tell the script to wake you up after a specified
 #   amount of time has passed since sleep onset.  
 # This may also be qualified with a sleep stage, which will wake you once the
 #   given sleep stage has continued for the given amount of time.
-wake_after
-    miner1 = 1 light  # 1 second of light sleep
-    miner2 = 2 light  # 2 seconds
-    miner3 = 3 light
-    miner4 = 4 light
-    miner5 = 5 light
-    miner6 = 6 light
+action_trigger
+    miner1 = e/ll/   # 1 minute of light sleep
+    miner2 = e/llll/ # 2 minutes
+    miner3 = e/l{6}/ # 3 minutes
+    miner4 = e/l{8}/
+    miner5 = e/l{10}/
+    miner6 = e/l{12}/
+
+    #miner1 = 1 light  # 1 minute of light sleep
+    #miner2 = 2 light  
+    #miner3 = 3 light
+    #miner4 = 4 light
+    #miner5 = 5 light
+    #miner6 = 6 light
     
     # The alarm command for this wake_after block.
     # This is executed at the system's command line.
@@ -19,10 +154,10 @@ end
 
 wake_after
     # Examples that will wake after any combination of light/rem/wake/etc.
-    core = 3:00:00  # 3 hours
-    nap1 = 0:20:00  # 20 minutes
-    nap2 =   20:00  # 20 minutes
-    20:00 - 24:00 = 20:00 # same as nap3 = 20:00
+    #core = 3:00:00  # 3 hours
+    #nap1 = 0:20:00  # 20 minutes
+    #nap2 =   20:00  # 20 minutes
+    #20:00 - 24:00 = 20:00 # same as nap3 = 20:00
     
     alarm = "mplayer alarm.wav"
 end

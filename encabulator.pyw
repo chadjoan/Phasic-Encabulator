@@ -43,6 +43,7 @@ USE_ZEO_RDL = True
 #   "alarm.wav" file that should be found in the same directory as this script.
 
 from common import *
+#from sregex import *
 
 import sys
 import time

@@ -111,3 +111,86 @@ Restarting in 0.5 seconds...
 -------------------------
 Found the following ports:
 /dev/ttyUSB0
+
+
+
+
+
+
+
+================================================================================
+Phasic Encabulator  Copyright (C) 2011  Chad Joan
+This program comes with ABSOLUTELY NO WARRANTY; for details hit w.
+This is free software, and you are welcome to redistribute it
+under certain conditions; hit l for details.
+
+Parsing config file /etc/phasic-encabulator.conf
+Config file parsed successfully.
+
+-------------------------
+Found the following ports:
+/dev/ttyUSB0
+
+Using port /dev/ttyUSB0
+
+Hit ctrl-C or q at any time to stop.
+Hit space bar to cancel any playing alarms.
+
+------------------------------------------------
+Attempting to connect on port /dev/ttyUSB0
+... done.
+
+11:41:00           Undefined    (Bad Signal)
+11:41:30           Undefined    (Bad Signal)
+11:42:00           Undefined    (Bad Signal)
+11:42:30           Undefined                
+11:43:00           Undefined                
+11:43:30           Undefined                
+11:44:00 ########  Awake                    
+11:44:30 ########  Awake                    
+11:45:00 ########  Awake                    
+11:45:30 ########  Awake                    
+11:46:00 ######    REM                      
+11:46:30 ######    REM                      
+11:47:00 ######    REM                      
+11:47:30 ######    REM                      
+11:48:00 ######    REM                      
+11:48:30 ######    REM                      
+11:49:00 ######    REM                      
+11:49:30 ######    REM                      
+11:50:00 ######    REM                      
+11:50:30 ######    REM                      
+11:51:00 ######    REM                      
+11:51:30 ######    REM                      
+11:52:00 ######    REM                      
+11:52:30 ######    REM                      
+11:53:00 ######    REM                      
+11:53:30 ######    REM                      
+11:54:00 ######    REM                      
+11:54:30 ######    REM                      
+Capture error: bad checksum
+Capture error: Mismatched lengths.
+11:55:30 ######    REM                      
+11:56:00 ######    REM                      
+Capture error: bad checksum
+Capture error: bad checksum
+
+Caught an exception!
+This is almost certainly a bug.
+The exception's message is as follows:
+Traceback (most recent call last):
+  File "encabulator.pyw", line 186, in run
+    BaseLink.BaseLink.run(self)
+  File "/mnt/sharedhd/downloads/zeo/ZeoRawDataLib/Distribute/Phasic-Encabulator/ZeoRawData/BaseLink.py", line 182, in run
+    callback(timestamp, timestamp_subsec, version, data)
+  File "/mnt/sharedhd/downloads/zeo/ZeoRawDataLib/Distribute/Phasic-Encabulator/ZeoRawData/Parser.py", line 71, in update
+    version, eventTypes[getUInt32(data[1:5])])#for some reason 5 long when did 1:
+KeyError: 7812
+Zeo disconnected from port /dev/ttyUSB0
+
+Current serial port status:
+/dev/ttyUSB0
+
+---------------------------
+Q command given.  Quitting.
+
